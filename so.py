@@ -43,8 +43,12 @@ bodies = df['@Body'][mask].values
 scores = df['@Score'][mask].values
 views = df['@ViewCount'][mask].values
 #answered = ~(df['@AcceptedAnswerId'][mask].isna())
-answered = df['@AnswerCount'][mask]>1
+answered = df['@AnswerCount'][mask]>=1
 corr_score = np.log10(np.maximum(scores,1))
+
+titles = titles[-20000:]
+answered = answered[-20000:]
+corr_score = corr_score[-20000:]
 
 print(f'Answered: {np.mean(answered)}')
 print(titles.shape)
@@ -56,7 +60,7 @@ print(stop_words)
 
 #Counts non-stop-words in the titles.
 print('Building one-hot encoding...')
-vectorizer = CountVectorizer(min_df=100,vocabulary=stop_words)
+vectorizer = CountVectorizer(min_df=100)#,vocabulary=stop_words)
 X = vectorizer.fit_transform(titles)
 word_counts = np.array(X.sum(axis=0))[0]
 idx = np.argsort(-word_counts)
@@ -106,16 +110,16 @@ if fit_answered:
 	#Fit a model
 	model = LogisticRegression(max_iter=1000)
 	model.fit(X_train,y_train)#,sample_weight=np.exp(y_train))
-	y_pred = model.predict(X_train)
+	y_pred = model.predict_proba(X_train)[:,1]
 	r2 = model.score(X_train,y_train)#,sample_weight=np.exp(y_train))
 	ra = roc_auc_score(y_train,y_pred)-0.5
-	print(f'Train R^2: {r2}')
+	print(f'Train Accuracy: {r2}')
 	print(f'Train RA: {ra}')
 
-	y_pred = model.predict(X_test)
+	y_pred = model.predict_proba(X_test)[:,1]
 	r2 = model.score(X_test,y_test)#,sample_weight=np.exp(y_test))
-	ra = roc_auc_score(y_test,y_pred)-0.5
-	print(f'Test R^2: {r2}')
+	ra = roc_auc_score(y_test,y_pred)
+	print(f'Test Accuracy: {r2}')
 	print(f'Test RA: {ra}')
 
 	idx = np.argsort(model.coef_[0])
@@ -123,3 +127,13 @@ if fit_answered:
 	extreme_idx = np.concatenate([idx[:20],idx[-20:]])
 	for w,c in zip(vocab[extreme_idx],model.coef_[0][extreme_idx]):
 		print(f'{w}: {c}')
+
+	#Divide in to quantiles (1-5 stars) and compute average % answered in each.
+	#Maybe also average # of answers.
+	#y_pred = model.predict_proba(X)[:,1]
+	np.savetxt('pred.txt',y_pred)
+	divisions = [np.quantile(y_pred,q) for q in [0,0.2,0.4,0.6,0.8,1]]
+	print(divisions)
+	for i in range(5):
+		qmask = (y_pred > divisions[i])&(y_pred <= divisions[i+1])
+		print(f'{i+1} stars: {np.mean(y_test[qmask]):.3f}   {np.sum(qmask)}')
