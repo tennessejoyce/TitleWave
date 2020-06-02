@@ -7,9 +7,11 @@ import numpy as np
 from sklearn.feature_extraction.text import CountVectorizer,TfidfTransformer,TfidfVectorizer
 import matplotlib.pyplot as plt
 from scipy.stats import gaussian_kde,kendalltau
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LinearRegression,Ridge,LogisticRegression
+from sklearn.neural_network import MLPRegressor
 from sklearn.model_selection import train_test_split
 from scipy.sparse import csr_matrix,hstack
+from sklearn.metrics import roc_auc_score
 
 category = 'physics'#'physics'
 
@@ -35,112 +37,89 @@ else:
 	print('Loading dataframe...')
 	df = pd.read_csv(category + '.csv')
 
-question_mask = ~df['@Title'].isna()
-titles = df['@Title'][question_mask].values
-bodies = df['@Body'][question_mask].values
-scores = df['@Score'][question_mask].values
+mask = (~df['@Title'].isna())&(df['@ClosedDate'].isna())
+titles = df['@Title'][mask].values
+bodies = df['@Body'][mask].values
+scores = df['@Score'][mask].values
+views = df['@ViewCount'][mask].values
+#answered = ~(df['@AcceptedAnswerId'][mask].isna())
+answered = df['@AnswerCount'][mask]>1
 corr_score = np.log10(np.maximum(scores,1))
 
+print(f'Answered: {np.mean(answered)}')
 print(titles.shape)
-print(titles[:10])
+#print(titles[:10])
 
-with open(category+'_titles.txt','w', encoding='utf-8') as f:
-	f.writelines([t+'\n' for t in titles])
-exit()
+with open('custom_stop_words.txt','r') as f:
+	stop_words = f.read().splitlines()
+print(stop_words)
 
+#Counts non-stop-words in the titles.
+print('Building one-hot encoding...')
+vectorizer = CountVectorizer(min_df=100,vocabulary=stop_words)
+X = vectorizer.fit_transform(titles)
+word_counts = np.array(X.sum(axis=0))[0]
+idx = np.argsort(-word_counts)
+vocab = np.array(vectorizer.get_feature_names())
+# for i,(word,count) in enumerate(zip(vocab[idx],word_counts[idx])):
+# 	#if count>100:
+# 	print(f'{word}: {count}')
+# exit()
+print(X.shape)
+fit_score = True
+if fit_score:
+	print('Fitting score...')
+	#y = np.log(views+1)
+	y=corr_score
 
-count_frequencies = False
-if count_frequencies:
-	#Counts non-stop-words in the titles.
-	print('Building one-hot encoding...')
-	vectorizer = CountVectorizer(stop_words='english')
-	X = vectorizer.fit_transform(titles)
-	word_counts = np.array(X.sum(axis=0))[0]
-	idx = np.argsort(-word_counts)
-	vocab = np.array(vectorizer.get_feature_names())
-	for i,(word,count) in enumerate(zip(vocab[idx],word_counts[idx])):
-		if i>20:
-			exit()
-		print(f'{word}: {count}')
+	X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=41)
 
+	#Fit a model
+	model = Ridge(alpha=100)
+	model.fit(X_train,y_train)#,sample_weight=np.exp(y_train))
+	y_pred = model.predict(X_train)
+	tau,pvalue = kendalltau(y_train,y_pred)
+	r2 = model.score(X_train,y_train)#,sample_weight=np.exp(y_train))
+	print(f'Train R^2: {r2}')
+	print(f'Train Tau: {tau}')
 
+	y_pred = model.predict(X_test)
+	tau,pvalue = kendalltau(y_test,y_pred)
+	r2 = model.score(X_test,y_test)#,sample_weight=np.exp(y_test))
+	print(f'Test R^2: {r2}')
+	print(f'Test Tau: {tau}')
 
+	idx = np.argsort(model.coef_)
+	#idx = np.array(idx,dtype=int)
+	extreme_idx = np.concatenate([idx[:10],idx[-10:]])
+	for w,c in zip(vocab[extreme_idx],model.coef_[extreme_idx]):
+		print(f'{w}: {c}')
 
-#Build title features
+fit_answered = True
+if fit_answered:
+	print('Fitting answered...')
+	#y = np.log(views+1)
+	y=answered
 
-question_mark = np.array([t[-1]=='?' for t in titles],dtype=int)
-print('Analyze question mark...')
-print(np.mean(question_mark))
-print(np.mean(corr_score[question_mark]))
-print(np.mean(corr_score[1-question_mark]))
-#exit()
+	X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=40)
 
+	#Fit a model
+	model = LogisticRegression(max_iter=1000)
+	model.fit(X_train,y_train)#,sample_weight=np.exp(y_train))
+	y_pred = model.predict(X_train)
+	r2 = model.score(X_train,y_train)#,sample_weight=np.exp(y_train))
+	ra = roc_auc_score(y_train,y_pred)-0.5
+	print(f'Train R^2: {r2}')
+	print(f'Train RA: {ra}')
 
+	y_pred = model.predict(X_test)
+	r2 = model.score(X_test,y_test)#,sample_weight=np.exp(y_test))
+	ra = roc_auc_score(y_test,y_pred)-0.5
+	print(f'Test R^2: {r2}')
+	print(f'Test RA: {ra}')
 
-#Compute the mean TF-IDF scores of each title.
-print('Building TF-IDF encoding...')
-vectorizer = CountVectorizer(stop_words='english',min_df=1000)
-tfidf = vectorizer.fit_transform(bodies)
-body_length = np.array((tfidf>0).sum(axis=1))[:,0]+1
-body_sum_tfidf = np.array(tfidf.sum(axis=1))[:,0]
-
-
-
-#Build title features.
-print('Building title features...')
-title_tfidf = vectorizer.transform(titles)
-length = np.array((title_tfidf>0).sum(axis=1))[:,0]+1
-sum_tfidf = np.array(title_tfidf.sum(axis=1))[:,0]
-mean_tfidf = sum_tfidf/length
-similarity = np.array(tfidf.multiply(title_tfidf).sum(axis=1))[:,0]
-mean_similarity = similarity/(1+body_sum_tfidf)/(1+sum_tfidf)
-
-title_features = [csr_matrix(m[:,None]) for m in [body_length,question_mark,length,mean_tfidf,sum_tfidf,similarity,mean_similarity]]
-#question_mark,length,mean_tfidf,sum_tfidf,similarity,mean_similarity,
-
-
-print('Predicting...')
-
-
-
-
-
-#Makes a scatter plot where each point is colored according to the local point density.
-def density_plot(x,y):
-	#Use kernel density estimation to color the points.
-	points = np.vstack([x,y])
-	density = gaussian_kde(points)(points)
-	#Sort the points so that the highest densities appear on top. This looks a bit better.
-	idx = density.argsort()
-	x,y,density = x[idx], y[idx], density[idx]
-	#Draw the scatter plot.
-	plt.scatter(x, y, c=density, s=5)
-
-
-#density_plot(length,corr_score)
-#plt.scatter()
-#plt.show()
-
-print(question_mark.shape)
-print(tfidf.shape)
-X = hstack(title_features+[tfidf])#np.stack([length,mean_tfidf],axis=-1) #question_mark[:,None]
-y = corr_score
-
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-#Fit a model
-model = LinearRegression()
-model.fit(X_train,y_train)
-y_pred = model.predict(X_train)
-tau,pvalue = kendalltau(y_train,y_pred)
-r2 = model.score(X_train,y_train)
-print(f'Train R^2: {r2}')
-print(f'Train Tau: {tau}')
-
-y_pred = model.predict(X_test)
-tau,pvalue = kendalltau(y_test,y_pred)
-r2 = model.score(X_test,y_test)
-print(f'Test R^2: {r2}')
-print(f'Test Tau: {tau}')
-
-
+	idx = np.argsort(model.coef_[0])
+	#idx = np.array(idx,dtype=int)
+	extreme_idx = np.concatenate([idx[:20],idx[-20:]])
+	for w,c in zip(vocab[extreme_idx],model.coef_[0][extreme_idx]):
+		print(f'{w}: {c}')
