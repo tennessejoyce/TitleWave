@@ -1,7 +1,7 @@
 from ktrain import load_predictor
 
 #Predict title quality
-predictor = load_predictor('ktrain_predictor_overflow')
+predictor = load_predictor('../../ktrain_predictor_overflow')
 
 def predict_quality(title):
 	prob = predictor.predict_proba([title])[0,1]
