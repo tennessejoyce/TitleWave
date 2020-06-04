@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>Enter the title of your post</h1>
+    <form action="" method="post" novalidate>
+        {{ form.hidden_tag() }}
+        <p>
+            {{ form.title.label }}<br>
+            {{ form.title(size=128) }}
+        </p>
+        <p>{{ form.submit() }}</p>
+    </form>
+{% endblock %}
