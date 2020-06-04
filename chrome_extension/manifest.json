@@ -1,0 +1,22 @@
+{
+	"manifest_version": 2,
+
+	"name": "Stack Overflow Title Generator",
+	"description": "This extension will help you choose a title for your Stack Overflow question.",
+	"version": "1.0",
+
+	"content_scripts" : [{
+				"matches" : ["https://stackoverflow.com/questions/*"],
+				"js" : ["jquery-3.5.1.min.js","contentScript.js"],
+				"run_at" : "document_end"
+				}],
+
+	"background": {
+		"page": "background.html"
+	},
+	
+	"permissions" : [
+        "https://stackoverflow.com/",
+        "http://localhost:5000/*"
+    ]
+}
