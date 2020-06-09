@@ -3,8 +3,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import roc_auc_score
 import torch
 import os
-from transformers import BertTokenizer,BertForSequenceClassification,T5Tokenizer, T5ForConditionalGeneration, AdamW
-from tqdm.notebook import tqdm
+from transformers import BertTokenizer,BertForSequenceClassification, AdamW
+from tqdm import tqdm
 from scipy.special import softmax
 #Train on GPU if available (go to 'Edit/Notebook Settings' in Colab to enable)
 if torch.cuda.is_available():
