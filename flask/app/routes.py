@@ -1,8 +1,7 @@
 from flask import render_template, flash, redirect, request, jsonify
 from app import app
 from app.forms import TextboxForm
-from app.bert_quality import predict_quality
-from app.summarize import suggest_a_title
+from app.nlp_models import suggest_title,evaluate_title
 import sys
 
 @app.route('/')
@@ -20,7 +19,7 @@ def index():
 def evaluate():
     print('Evaluating title...')
     title = request.get_json()['title']
-    prob = predict_quality(title)
+    prob = evaluate_title(title)
     return jsonify(prob)
 
 @app.route('/suggest', methods=['GET', 'POST'])
@@ -28,5 +27,5 @@ def suggest():
     print('Suggesting title...')
     body = request.get_json()['body']
     print(body, file=sys.stderr)
-    title = suggest_a_title(body)
+    title = suggest_title(body)
     return jsonify(title)

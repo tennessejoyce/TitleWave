@@ -13,13 +13,13 @@ btn2.type='button'
 btn1.id='iamabutton2'
 full_above_title.appendChild(btn2)
 
-var predict_line = document.createTextNode("Hello World");
+var predict_line = document.createTextNode(" ");
 full_above_title.appendChild(predict_line)
 
 var body = document.getElementById('wmd-input')
 
-btn1.onclick = function() {
-	console.log('Evaluating title...')
+function evaluate() {
+	console.log(' Evaluating title...')
 	if (title.value){
 		$.ajax({
 			type : 'POST',
@@ -28,7 +28,7 @@ btn1.onclick = function() {
 			data : JSON.stringify({'title' : title.value}),
 			contentType: "application/json",
 			success : function(result) {
-				predict_line.textContent = "Probability of getting an answer: " + result
+				predict_line.textContent = " Probability of getting an answer: " + result
 			},
 			error: function(xhr, status, error) {
 				console.log(xhr.status)
@@ -37,13 +37,14 @@ btn1.onclick = function() {
 		})
 	}
 	else{
-		predict_line.textContent = "No title to evaluate"
+		predict_line.textContent = " No title to evaluate"
 	}
 }
 
 
-btn2.onclick = function() {
+function suggest() {
 	console.log('Suggesting title...')
+	predict_line.textContent = ' Thinking...'
 	if (body.value){
 		$.ajax({
 			type : 'POST',
@@ -54,14 +55,20 @@ btn2.onclick = function() {
 			success : function(result) {
 				console.log(result)
 				title.value = result
+				evaluate()
 			},
 			error: function(xhr, status, error) {
+				predict_line.textContent('Error')
 				console.log(xhr.status)
                 console.log(status)
             }
 		})
 	}
 	else{
-		predict_line.textContent = "No question body to summarize"
+		predict_line.textContent = " No question body to summarize"
 	}
 }
+
+
+btn1.onclick = evaluate
+btn2.onclick = suggest
