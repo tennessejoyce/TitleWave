@@ -1,18 +1,15 @@
 <html>
     <head>
-        {% if title %}
-        <title>{{ title }} - microblog</title>
-        {% else %}
-        <title>microblog</title>
-        {% endif %}
+        <title>TitleWave</title>
     </head>
     <body>
         <div>
-            Microblog:
+            TitleWave:
             <a href="/index">Home</a>
-            <a href="/login">Login</a>
+            <a href="/about">About</a>
         </div>
         <hr>
+        {% block content %}{% endblock %}
         {% with messages = get_flashed_messages() %}
         {% if messages %}
         <ul>
@@ -22,6 +19,5 @@
         </ul>
         {% endif %}
         {% endwith %}
-        {% block content %}{% endblock %}
     </body>
 </html>

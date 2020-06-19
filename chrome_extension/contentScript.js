@@ -23,7 +23,7 @@ function evaluate() {
 	if (title.value){
 		$.ajax({
 			type : 'POST',
-			url : 'http://localhost:5000/evaluate',
+			url : 'http://50.17.143.56/evaluate',
 			dataType : 'json',
 			data : JSON.stringify({'title' : title.value}),
 			contentType: "application/json",

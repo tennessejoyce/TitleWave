@@ -16,7 +16,8 @@
 	},
 	
 	"permissions" : [
-        "https://stackoverflow.com/",
-        "http://localhost:5000/*"
+        "http://stackoverflow.com/",
+        "http://localhost:5000/*",
+        "http://50.17.143.56/*"
     ]
 }

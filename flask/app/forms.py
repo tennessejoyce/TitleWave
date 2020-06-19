@@ -4,4 +4,8 @@ from wtforms.validators import DataRequired
 
 class TextboxForm(FlaskForm):
     title = StringField('Post title', validators=[DataRequired()])
-    submit = SubmitField('Predict!')
+    submit = SubmitField('Evaluate title!')
+
+class TextboxFormBig(FlaskForm):
+    title = StringField('Question body', validators=[DataRequired()])
+    submit = SubmitField('Suggest a title!')
