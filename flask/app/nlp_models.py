@@ -4,14 +4,15 @@ import torch
 import re
 import numpy as np
 
-bert_location = '../../models/BERT_6-10'
+bert_location = '../../models/BERT'
 bert_tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 bert_model = BertForSequenceClassification.from_pretrained(bert_location, num_labels = 3)
 bert_model.eval()
 
-t5_location = '../../models/t5_6-10'
+t5_location = '../../models/T5'
 t5_tokenizer = T5Tokenizer.from_pretrained('t5-base')
 t5_model = T5ForConditionalGeneration.from_pretrained(t5_location)
+t5_model.eval()
 
 def clean_v3(text):
   #Remove code blocks, urls, and html tags.
@@ -41,11 +42,3 @@ def evaluate_title(title,metric=0):
 		logit = bert_model(title)[0][0][metric].cpu().numpy()
 		prob = np.exp(logit)/(1+np.exp(logit))
 	return f'{100*prob:.1f}%'
-
-
-# def suggest_a_title(body):
-# 	body = 'summarize: ' + body
-# 	input_ids = tokenizer.encode(body, return_tensors="pt")  # Batch size 1
-# 	outputs = model.generate(input_ids,max_length=40,num_beams=10,length_penalty=2)
-# 	summary = tokenizer.decode(outputs[0], skip_special_tokens=True)
-# 	return summary

@@ -6,18 +6,13 @@
 	"version": "1.0",
 
 	"content_scripts" : [{
-				"matches" : ["https://stackoverflow.com/questions/*"],
+				"matches" : ["https://stackoverflow.com/questions/ask"],
 				"js" : ["jquery-3.5.1.min.js","contentScript.js"],
 				"run_at" : "document_end"
 				}],
 
-	"background": {
-		"page": "background.html"
-	},
 	
 	"permissions" : [
-        "http://stackoverflow.com/",
-        "http://localhost:5000/*",
-        "http://50.17.143.56/*"
+        "https://stackoverflow.com/*"
     ]
 }

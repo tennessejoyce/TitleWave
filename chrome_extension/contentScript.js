@@ -23,7 +23,7 @@ function evaluate() {
 	if (title.value){
 		$.ajax({
 			type : 'POST',
-			url : 'http://50.17.143.56/evaluate',
+			url : 'https://www.titlewave.xyz/evaluate',
 			dataType : 'json',
 			data : JSON.stringify({'title' : title.value}),
 			contentType: "application/json",
@@ -48,7 +48,7 @@ function suggest() {
 	if (body.value){
 		$.ajax({
 			type : 'POST',
-			url : 'http://localhost:5000/suggest',
+			url : 'https://www.titlewave.xyz/suggest',
 			dataType : 'json',
 			data : JSON.stringify({'body' : body.value}),
 			contentType: "application/json",
