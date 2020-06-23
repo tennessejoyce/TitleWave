@@ -7,6 +7,7 @@ import sys
 @app.route('/', methods=['GET', 'POST'])
 @app.route('/index', methods=['GET', 'POST'])
 def index():
+	'''Main page for the webapp where you can try it out.'''
     form1 = TextboxForm()
     if form1.title.data and form1.validate_on_submit():
         title = form1.title.data
@@ -25,6 +26,7 @@ def index():
 
 @app.route('/evaluate', methods=['GET', 'POST'])
 def evaluate():
+	'''Route accessed by the Chrome extension when Evaluate title is clicked.'''
     print('Evaluating title...')
     title = request.get_json()['title']
     prob = evaluate_title(title)
@@ -32,6 +34,7 @@ def evaluate():
 
 @app.route('/suggest', methods=['GET', 'POST'])
 def suggest():
+	'''Route accessed by the Chrome extension when Suggest a Title is clicked.'''
     print('Suggesting title...')
     body = request.get_json()['body']
     print(body, file=sys.stderr)
@@ -40,5 +43,6 @@ def suggest():
 
 @app.route('/about', methods=['GET', 'POST'])
 def about():
+	'''Load the About page.'''
     return render_template('about.html')
 

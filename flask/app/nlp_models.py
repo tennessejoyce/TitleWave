@@ -4,18 +4,21 @@ import torch
 import re
 import numpy as np
 
+
+#Load fine-tuned BERT for 'Evaluate title'
 bert_location = '../../models/BERT'
 bert_tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 bert_model = BertForSequenceClassification.from_pretrained(bert_location, num_labels = 3)
 bert_model.eval()
 
+#Load fine-tuned T5 for 'Suggest a title'
 t5_location = '../../models/T5'
 t5_tokenizer = T5Tokenizer.from_pretrained('t5-base')
 t5_model = T5ForConditionalGeneration.from_pretrained(t5_location)
 t5_model.eval()
 
 def clean_v3(text):
-  #Remove code blocks, urls, and html tags.
+  '''Remove code blocks, urls, and html tags.'''
   text = re.sub(r'<code[^>]*>(.+?)</code\s*>', '', text,flags=re.DOTALL | re.MULTILINE)
   text = re.sub(r'<div[^>]*>(.+?)</div\s*>', '', text,flags=re.DOTALL | re.MULTILINE)
   text = re.sub(r'<blockquote[^>]*>(.+?)</blockquote\s*>', '', text,flags=re.DOTALL | re.MULTILINE)
@@ -26,7 +29,9 @@ def clean_v3(text):
   return text
 
 def suggest_title(body):
+	'''Uses T5 to summarize the body of the question into a short title.'''
 	with torch.no_grad():
+		#Prefix tells T5 that this is a summarization task.
 		body = 'summarize: ' + clean_v3(body)
 		body = t5_tokenizer.encode(body, return_tensors="pt",max_length=512)
 		summary = t5_model.generate(body,max_length=100,num_beams=16,no_repeat_ngram_size=2)[0]
@@ -36,6 +41,7 @@ def suggest_title(body):
 	return summary
 
 def evaluate_title(title,metric=0):
+	'''Uses BERT to evaluate the probability a question gets answered, just based on the title.'''
 	out = []
 	with torch.no_grad():
 		title = bert_tokenizer.encode(title, return_tensors="pt")
