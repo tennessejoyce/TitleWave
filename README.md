@@ -1,16 +1,9 @@
-# Stack-Exchange-Title-Generator
+# TitleWave
 
 ## Overview
-Stack Overflow is ubiquitous in the programming world as a place where people can ask questions to a community other programmers. In 2019, over 5,000 questions a day were asked, but only 70% of those were answered. To increase your chance of getting an answer it’s really important to have a compelling title so that people actually click on your question. But this can be tough, especially for new users who aren’t familiar with the conventions on the website. To solve this problem, I built TitleWave, a Chrome extension that integrates directly into the Stack Overflow website and helps improve your title. Let’s see how it works.
+Stack Overflow is ubiquitous in the programming world as a place where people can ask questions to a community other programmers. In 2019, over 5,000 questions a day were asked, but only 70% of those were answered. To increase your chance of getting an answer it’s really important to have a compelling title so that people actually click on your question. But this can be tough, especially for new users who aren’t familiar with the conventions on the website. To solve this problem, I built TitleWave, a Chrome extension that integrates directly into the Stack Overflow website and helps improve your title.
 
-
-I'm developing a Chrome plugin that will automatically generate a strong title for your
-Stack Exchange question, given the body of text. The algorithm leverages natural language processing
-to summarize the key details of your question, and phrases it in a way that is consistent with
-previously successful questions on similar topics. The improved title quality will make it easier
-for experts to notice your question, contributing to faster, higher quality answers.
-Alternatively, the algorithm could be helpful in searching for similar questions, simply by inputing
-the suggested title into the existing search function on Stack Exchange.
+The algorithm leverages natural language processing to summarize the key details of your question, and phrases it in a way that is consistent with previously successful questions on similar topics. The improved title quality will make it easier for experts to notice your question, contributing to faster, higher quality answers.
 
 ## Installation
 I am hoping to make this extension available on the Chrome web store in the near future.
