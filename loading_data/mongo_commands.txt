@@ -1,0 +1,5 @@
+docker volume create --name=mongodata
+
+The name can be anything you like. The next step will pull the database image if it doesn’t already exist, then launch a running instance using the mounted volume.
+
+docker run --name mongodb -v mongodata:/data/db -d -p 27017:27017 mongo

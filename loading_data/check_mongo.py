@@ -16,6 +16,3 @@ for year in range(2010,2021):
 	posts_in_year = posts.count_documents({'CreationDate': date_range})
 	answered_posts_in_year = posts.count_documents({'CreationDate': date_range, 'AnswerCount': {'$gt': 0}})
 	print(f'{year} {posts_in_year} {answered_posts_in_year/posts_in_year:.1%}')
-
-
-#posts.drop()

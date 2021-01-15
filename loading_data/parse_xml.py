@@ -65,6 +65,8 @@ def prune_document(doc):
 
 # Name of the XML file, downloaded from https://archive.org/details/stackexchange.
 name = 'physics'
+#Batch for loading data in chunks
+batch_size = 1000
 
 # Metadata 
 metadata_cols = ['_id','CreationDate','Score','ViewCount','AnswerCount',
@@ -79,29 +81,35 @@ mongo_posts = db[f'{name}_posts']
 filename = f'{name}.stackexchange.com/Posts.xml'
 csv_filename = f'{name}_posts.csv'
 dates = set()
-dicts = []
 start_time = time()
+i = 0
+batch_dicts = []
 with open(csv_filename, 'w', newline='') as csv_file:
 	csv_writer = csv.DictWriter(csv_file, metadata_cols, extrasaction='ignore')
 	csv_writer.writeheader()
 	for attrib in xml_iterator(filename):
 		if attrib['PostTypeId']!='1':
-			#If the post isn't a question, skip it.
+			# If the post isn't a question, skip it.
 			continue
-
 		# Preprocess the features in the dictionary.
 		attrib = prune_document(attrib)
-		
-		# Add to MongoDB
-		mongo_posts.insert_one(attrib)
-
-		# Write to a csv (just the metadata features)
-		csv_writer.writerow(attrib)
-		
+		batch_dicts.append(attrib)
+		i += 1	
+		if i%batch_size == 0:
+			# Add to MongoDB
+			mongo_posts.insert_many(batch_dicts)
+			# Write to a csv (just the metadata features)
+			csv_writer.writerows(batch_dicts)
+			# Delete the batch to free up memory.
+			batch_dicts = []
 
 		# Whenever we get to a new year, print it to indicate progress.
 		d = attrib['CreationDate'].year
 		if not (d in dates):
 			print(d)
 			dates.add(d)
+	# Write the remaining data
+	if batch_dicts:
+		mongo_posts.insert_many(batch_dicts)
+		csv_writer.writerows(batch_dicts)
 print(f'Duration: {time()-start_time:.2f} s')
