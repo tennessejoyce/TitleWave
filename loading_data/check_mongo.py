@@ -8,6 +8,11 @@ client = MongoClient()
 db = client.titlewave
 posts = db[f'{name}_posts']
 
+total_posts = posts.count_documents({})
+if total_posts==0:
+	print('No posts found...')
+	exit()
+
 #Search between two dates
 for year in range(2010,2021):
 	start = datetime(year, 1, 1)
