@@ -1,4 +1,5 @@
 .idea
 venv
+venv_tfjs
 data
 .ipynb_checkpoints/
