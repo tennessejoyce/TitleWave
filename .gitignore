@@ -1,5 +1,2 @@
-*.csv
-*.7z
-*.xml
 venv
 working_dir
