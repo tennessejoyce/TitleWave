@@ -1,58 +1,52 @@
-import torch
-from torch.utils.data import DataLoader
-from data_loader import PostDataset
-from training_loops import fit
-from transformers import BertForSequenceClassification
-from torch.optim import AdamW, Adam
-from torch.nn import BCEWithLogitsLoss, L1Loss
-from torch.optim.lr_scheduler import ExponentialLR
-from pymongo import MongoClient
-from datetime import datetime
-import numpy as np
+from transformers import BertForSequenceClassification, BertTokenizer, \
+    Trainer, TrainingArguments, EarlyStoppingCallback
+from MongoDataLoader import get_title_dataset
 
-if __name__=='__main__':
+train_batch_size = 8
+val_batch_size = 32
+output_dir='BERT_training'
 
-	# Hyperparameters
-	batch_size = 64
-	max_epochs = 20
-	train_steps_per_epoch = 8*1024//batch_size
-	val_steps_per_epoch = train_steps_per_epoch
+tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+pretrain_dataset, train_dataset, val_dataset = get_title_dataset('physics', tokenizer, partition_fractions=[0.3, 0.6, 0.1])
 
-	# Specify training set
-	start_date = datetime(2019, 1, 1)
-	end_date = datetime(2020, 1, 1)
-	doc_filter = {'CreationDate': {'$gte': start_date, '$lt': end_date}}
+# Load the model
+print('Loading model...')
+model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=1)
 
-	database='titlewave'
-	forum_name='physics'
+def freeze_model(model):
+    # Freeze all layers except the last at first.
+    for p in model.parameters():
+        p.requires_grad = False
+    for p in model.classifier.parameters():
+        p.requires_grad = True
 
-	# Load the data
-	print('Loading dataset...')
-	collection = MongoClient()[database][f'{forum_name}_posts']
-	data_set = PostDataset(collection, doc_filter=doc_filter)
-	data_loader = data_set.batch_generator(batch_size=batch_size)
+def unfreeze_model(model):
+    # Unfreeze all parameters.
+    for p in model.parameters():
+        p.requires_grad = True
 
-	print(f'{len(data_set)} documents found...')
+def train_model(model, train_dataset):
+    train_args = TrainingArguments(output_dir=output_dir,
+                                   evaluation_strategy='steps',
+                                   eval_steps=len(val_dataset)//train_batch_size,
+                                   num_train_epochs=1,
+                                   load_best_model_at_end=True,
+                                   per_device_train_batch_size=train_batch_size,
+                                   per_device_eval_batch_size=val_batch_size,
+                                   disable_tqdm=True,
+                                   save_steps=100000,
+                                   logging_steps=100000,
+                                   fp16=True,
+                                   save_total_limit=4)
+    #early_stopping = EarlyStoppingCallback(early_stopping_patience=2, early_stopping_threshold=1e-3)
+    trainer = Trainer(model, train_args, train_dataset=train_dataset, eval_dataset=val_dataset)
+    trainer.train()
 
-	# Load the model
-	print('Loading model...')
-	model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels = 1)
-	model.cuda()
+print('Training final layer...')
+freeze_model(model)
+train_model(model, pretrain_dataset)
+print('Training full model...')
+unfreeze_model(model)
+train_model(model, train_dataset)
 
-	# Freeze all layers except the last at first.
-	for p in model.parameters():
-		p.requires_grad = False
-	for p in model.classifier.parameters():
-		p.requires_grad = True
-
-	# Specify the optimizer and loss function
-	print('Setting hyperparameters...')
-	loss_function = L1Loss() #BCEWithLogitsLoss()
-	optimizer = Adam(model.parameters(), lr=1)
-	scheduler = ExponentialLR(optimizer, gamma=0.9)
-
-	# Train the model
-	print('Training model...')
-	fit(model, data_loader, optimizer, loss_function, scheduler,
-		train_steps_per_epoch, val_steps_per_epoch, max_epochs)
-
+model.save_pretrained(output_dir+'/final_model')
