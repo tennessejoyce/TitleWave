@@ -4,7 +4,6 @@ from MongoDataLoader import get_title_dataset
 
 train_batch_size = 8
 val_batch_size = 32
-output_dir='BERT_training'
 
 tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 pretrain_dataset, train_dataset, val_dataset = get_title_dataset('physics', tokenizer, partition_fractions=[0.3, 0.6, 0.1])
@@ -26,7 +25,7 @@ def unfreeze_model(model):
         p.requires_grad = True
 
 def train_model(model, train_dataset):
-    train_args = TrainingArguments(output_dir=output_dir,
+    train_args = TrainingArguments(output_dir='checkpoints',
                                    evaluation_strategy='steps',
                                    eval_steps=len(val_dataset)//train_batch_size,
                                    num_train_epochs=1,
@@ -42,11 +41,11 @@ def train_model(model, train_dataset):
     trainer = Trainer(model, train_args, train_dataset=train_dataset, eval_dataset=val_dataset)
     trainer.train()
 
-print('Training final layer...')
+print('Training output layer only...')
 freeze_model(model)
 train_model(model, pretrain_dataset)
-print('Training full model...')
+print('Training all layers...')
 unfreeze_model(model)
 train_model(model, train_dataset)
 
-model.save_pretrained(output_dir+'/final_model')
+model.save_pretrained('BERT_pytorch_model')

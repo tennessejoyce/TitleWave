@@ -1,5 +1,4 @@
 .idea
 venv
-working_dir
-dataset
+data
 .ipynb_checkpoints/
