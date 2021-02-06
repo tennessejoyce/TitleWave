@@ -8,9 +8,11 @@ from time import time
 import matplotlib.pyplot as plt
 
 # Name of the forum is passed as a command line argument.
-forum = sys.argv[1]
+if len(sys.argv)>1:
+    forum = sys.argv[1]
+else:
+    forum = 'physics'
 print(f'Forum: {forum}')
-os.chdir(forum)
 
 client = MongoClient()
 db = client.titlewave
@@ -36,7 +38,7 @@ print(f'Duration: {time() - start_time:.2f} s')
 
 print('Analyzing posts by title length...')
 start_time = time()
-result = posts.aggregate([{'$group': {'_id': '$TitleChars',
+result = posts.aggregate([{'$group': {'_id': {'$strLenCP': '$Title'},
                                       'NumPosts': {'$sum': 1},
                                       'AvgViews': {'$avg': '$ViewCount'},
                                       'AnswerProbability': {'$avg': {'$cond': [{'$gt': ['$AnswerCount', 0]}, 1, 0]}}}},
@@ -51,3 +53,16 @@ fig, ax = plt.subplots()
 df.plot(x='_id', y='NumPosts', ax = ax, color='blue')
 df.plot(x='_id', y='AnswerProbability', ax = ax.twinx(), color='red')
 plt.show()
+
+print('Analyzing posts by tag...')
+start_time = time()
+result = posts.aggregate([{'$group': {'_id': {'$strLenCP': '$Title'},
+                                      'NumPosts': {'$sum': 1},
+                                      'AvgViews': {'$avg': '$ViewCount'},
+                                      'AnswerProbability': {'$avg': {'$cond': [{'$gt': ['$AnswerCount', 0]}, 1, 0]}}}},
+                          {'$sort': {'_id': 1}}
+                          ])
+result = list(result)
+df = pd.DataFrame(result)
+print(df)
+print(f'Duration: {time() - start_time:.2f} s')

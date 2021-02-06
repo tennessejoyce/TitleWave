@@ -1,4 +1,2 @@
 transformers
-sentencepiece
 pymongo
-tensorflowjs
