@@ -73,13 +73,14 @@ class SequenceClassificationCollateFn:
 
 
 class Seq2SeqCollateFn:
-    def __init__(self, inputs_col, outputs_col, tokenizer):
+    def __init__(self, inputs_col, outputs_col, tokenizer, prefix='summarize: '):
         self.inputs_col = inputs_col
         self.outputs_col = outputs_col
         self.tokenizer = tokenizer
+        self.prefix = prefix
 
     def __call__(self, batch):
-        raw_inputs = [row[self.inputs_col] for row in batch]
+        raw_inputs = [self.prefix + row[self.inputs_col] for row in batch]
         raw_outputs = [row[self.outputs_col] for row in batch]
         inputs = self.tokenizer(raw_inputs, **tokenizer_args)
         outputs = self.tokenizer(raw_outputs, **tokenizer_args)

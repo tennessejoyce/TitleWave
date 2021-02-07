@@ -14,6 +14,8 @@ train_dataset, val_dataset = get_t5_dataset('physics', 0.2)
 print('Loading model...')
 model = T5ForConditionalGeneration.from_pretrained('t5-small')
 
+# For now we aren't freezing anything, but it could be smart to freeze the encoder in the first
+# part of training. Just try to learn how to write titles first, then improve the encoding after.
 
 def train_model(model, train_dataset):
     train_args = Seq2SeqTrainingArguments(output_dir='checkpoints',
