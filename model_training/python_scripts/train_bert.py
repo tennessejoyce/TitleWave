@@ -1,12 +1,15 @@
 from transformers import BertForSequenceClassification, BertTokenizer, \
     Trainer, TrainingArguments, EarlyStoppingCallback
-from MongoDataLoader import get_title_dataset
+from data_loading import get_title_dataset, SequenceClassificationCollateFn
 
 train_batch_size = 8
 val_batch_size = 32
 
 tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-pretrain_dataset, train_dataset, val_dataset = get_title_dataset('physics', tokenizer, partition_fractions=[0.3, 0.6, 0.1])
+collate_fn = SequenceClassificationCollateFn(inputs_col='Title', labels_col='Answered', tokenizer=tokenizer)
+
+train_dataset, val_dataset = get_title_dataset('physics', 0.2)
+
 
 # Load the model
 print('Loading model...')
@@ -29,21 +32,22 @@ def train_model(model, train_dataset):
                                    evaluation_strategy='steps',
                                    eval_steps=len(val_dataset)//train_batch_size,
                                    num_train_epochs=1,
-                                   load_best_model_at_end=True,
                                    per_device_train_batch_size=train_batch_size,
                                    per_device_eval_batch_size=val_batch_size,
                                    disable_tqdm=True,
-                                   save_steps=100000,
-                                   logging_steps=100000,
+                                   save_steps=1000000,
                                    fp16=True,
                                    save_total_limit=4)
-    #early_stopping = EarlyStoppingCallback(early_stopping_patience=2, early_stopping_threshold=1e-3)
-    trainer = Trainer(model, train_args, train_dataset=train_dataset, eval_dataset=val_dataset)
+    trainer = Trainer(model=model,
+                      args=train_args,
+                      data_collator=collate_fn,
+                      train_dataset=train_dataset,
+                      eval_dataset=val_dataset)
     trainer.train()
 
 print('Training output layer only...')
 freeze_model(model)
-train_model(model, pretrain_dataset)
+train_model(model, train_dataset)
 print('Training all layers...')
 unfreeze_model(model)
 train_model(model, train_dataset)
