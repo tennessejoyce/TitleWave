@@ -38,7 +38,7 @@ class MongoIterableDataset(torch.utils.data.IterableDataset):
         self.indices = indices
         self.projection = projection
         # Integers indexing the list of indices.
-        meta_indices = np.arange(0,len(self.indices))
+        meta_indices = np.arange(0, len(self.indices))
         if shuffle:
             np.random.shuffle(meta_indices)
         num_chunks = len(self.indices) // chuck_size
@@ -83,8 +83,10 @@ class Seq2SeqCollateFn:
         raw_outputs = [row[self.outputs_col] for row in batch]
         inputs = self.tokenizer(raw_inputs, **tokenizer_args)
         outputs = self.tokenizer(raw_outputs, **tokenizer_args)
-        for key, val in outputs.items():
-            inputs['decoder_' + key] = val
+        output_ids = outputs['input_ids']
+        # T5 expects labels to be padded with -100, not 0, so that it ignores them when computing the loss.
+        output_ids[output_ids == 0] = -100
+        inputs['labels'] = output_ids
         return inputs
 
 
@@ -130,4 +132,20 @@ def get_title_dataset(forum, val_fraction):
     train_dataset = MongoIterableDataset(posts, train_indices, titles_projection)
     # Validation dataset should be fully loaded into memory.
     val_dataset = MongoDataset(posts, val_indices, titles_projection)
+    return train_dataset, val_dataset
+
+
+def get_t5_dataset(forum, val_fraction):
+    posts = get_mongo_collection(forum)
+    query = mongo_query(start_date=datetime(2019, 1, 1),
+                        end_date=datetime(2020, 1, 1),
+                        exclude_closed=True)
+    projection = {'Title': True,
+                  'Body': True,
+                  '_id': False}
+    indices = get_mongo_indices(posts, query)
+    train_indices, val_indices = train_test_split(indices, test_size=val_fraction)
+    train_dataset = MongoIterableDataset(posts, train_indices, projection)
+    # Validation dataset should be fully loaded into memory.
+    val_dataset = MongoDataset(posts, val_indices, projection)
     return train_dataset, val_dataset
