@@ -9,8 +9,10 @@ if [ $forum == "overflow" ]; then
   if [ ! -f "Posts.7z" ]; then
     wget -O "Posts.7z" "https://archive.org/download/stackexchange/stackoverflow.com-Posts.7z"
   fi
-  if [ ! -d "Posts.7z" ]; then
+  if [ ! -f "Posts.7z" ]; then
     7z e "Posts.7z"
+    mkdir "$forum"
+    mv Posts.xml "$forum"
   fi
 else
   if [ ! -f "$forum.7z" ]; then

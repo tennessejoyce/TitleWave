@@ -11,10 +11,21 @@ tokenizer_args = {'truncation': True,
                   'return_tensors': 'pt'}
 
 
+def split_list(indices, chunk_size):
+    """Splits a list into chunks of specified size."""
+    # Integers indexing the list of indices.
+    meta_indices = np.arange(0, len(indices))
+    np.random.shuffle(meta_indices)
+    num_chunks = len(indices) // chunk_size
+    chunked_meta_indices = np.array_split(meta_indices, num_chunks)
+    return [[indices[i] for i in chunk] for chunk in chunked_meta_indices]
+
+
 class MongoDataset(torch.utils.data.Dataset):
     """Wraps a MongoDB collection as a Pytorch Dataset."""
 
     def __init__(self, collection: pymongo.collection.Collection, indices, projection):
+        """"""
         self.results = list(collection.find({'_id': {'$in': indices}}, projection))
 
     def __getitem__(self, idx):
@@ -26,27 +37,17 @@ class MongoDataset(torch.utils.data.Dataset):
 
 
 class MongoIterableDataset(torch.utils.data.IterableDataset):
-    """
-    Wraps a MongoDB collection as a Pytorch IterableDataset, which produces documents at random from a specified
-    subset of the collection. This offers a considerable speedup over MongoDataset because the documents can be
-    requested in chunks, rather than one at a time.
-    """
+    """Wraps a MongoDB collection as a Pytorch IterableDataset which retrieves documents at random."""
 
-    def __init__(self, collection: pymongo.collection.Collection, indices, projection,
-                 chuck_size: int = 256, shuffle: bool = True):
+    def __init__(self, collection, indices, projection, chunk_size=256, shuffle=True):
+        """"""
         self.collection = collection
         self.indices = indices
         self.projection = projection
-        # Integers indexing the list of indices.
-        meta_indices = np.arange(0, len(self.indices))
-        if shuffle:
-            np.random.shuffle(meta_indices)
-        num_chunks = len(self.indices) // chuck_size
-        chunked_meta_indices = np.array_split(meta_indices, num_chunks)
-        self.chunked_indices = [[indices[i] for i in chunk] for chunk in chunked_meta_indices]
+        self.chunked_indices = split_list(indices, chunk_size=chunk_size)
 
     def __iter__(self):
-        """Return a generator that requests documents in chunks."""
+        """Return a generator that requests documents in chunks, but returns them one at a time."""
         for chunk in self.chunked_indices:
             cursor = self.collection.find({'_id': {'$in': chunk}}, self.projection)
             rows = list(cursor)
@@ -106,6 +107,13 @@ def mongo_query(start_date, end_date, exclude_closed):
         query['Closed'] = False
     return query
 
+def single_year_query(year, exclude_closed=True):
+    """Returns a MongoDB query returnins all posts for a given year."""
+    query = mongo_query(start_date=datetime(2019, 1, 1),
+                        end_date=datetime(2020, 1, 1),
+                        exclude_closed=exclude_closed)
+    return query
+
 
 def get_mongo_collection(forum):
     """Returns the Mongo collection corresponding to the specified StackExchange forum."""
@@ -114,39 +122,29 @@ def get_mongo_collection(forum):
     return posts
 
 
-def get_mongo_indices(collection, query):
+def get_mongo_ids(collection, query):
     result = collection.find(query, {'_id': True})
-    indices = [row['_id'] for row in result]
-    return indices
+    ids = [row['_id'] for row in result]
+    return ids
 
 
-def get_title_dataset(forum, val_fraction):
+def get_mongo_dataset(forum, year, mode, val_size):
     posts = get_mongo_collection(forum)
-    query = mongo_query(start_date=datetime(2019, 1, 1),
-                        end_date=datetime(2020, 1, 1),
-                        exclude_closed=True)
-    titles_projection = {'Title': True,
-                         'Answered': {'$gt': ['$AnswerCount', 0]},
-                         '_id': False}
-    indices = get_mongo_indices(posts, query)
-    train_indices, val_indices = train_test_split(indices, test_size=val_fraction)
-    train_dataset = MongoIterableDataset(posts, train_indices, titles_projection)
-    # Validation dataset should be fully loaded into memory.
-    val_dataset = MongoDataset(posts, val_indices, titles_projection)
+    query = single_year_query(year)
+    if mode == 'bert':
+        projection = {'Title': True,
+                     'Answered': {'$gt': ['$AnswerCount', 0]},
+                     '_id': False}
+    elif mode == 't5':
+        projection = {'Title': True,
+                      'Body': True,
+                      '_id': False}
+    else:
+        raise Exception(f"Unrecognized mode: '{mode}'. Should be 'bert' or 't5'.")
+    ids = get_mongo_ids(posts, query)
+    train_ids, val_ids = train_test_split(ids, test_size=val_size)
+    # Training data will be streamed, but validation data will stay in memory.
+    train_dataset = MongoIterableDataset(posts, train_ids, projection)
+    val_dataset = MongoDataset(posts, val_ids, projection)
     return train_dataset, val_dataset
 
-
-def get_t5_dataset(forum, val_fraction):
-    posts = get_mongo_collection(forum)
-    query = mongo_query(start_date=datetime(2019, 1, 1),
-                        end_date=datetime(2020, 1, 1),
-                        exclude_closed=True)
-    projection = {'Title': True,
-                  'Body': True,
-                  '_id': False}
-    indices = get_mongo_indices(posts, query)
-    train_indices, val_indices = train_test_split(indices, test_size=val_fraction)
-    train_dataset = MongoIterableDataset(posts, train_indices, projection)
-    # Validation dataset should be fully loaded into memory.
-    val_dataset = MongoDataset(posts, val_indices, projection)
-    return train_dataset, val_dataset

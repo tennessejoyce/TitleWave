@@ -72,9 +72,7 @@ def prune_document(doc):
             'AnswerCount': int(doc['AnswerCount']),
             'CommentCount': int(doc['CommentCount']),
             'HasAcceptedAnswer': ('AcceptedAnswerId' in doc),
-            'Closed': ('ClosedDate' in doc),
-            # 'TitleChars': len(doc['Title']),
-            # 'TitleWords': len(doc['Title'].split()),
+            'Closed': ('ClosedDate' in doc)
             }
 
 
@@ -99,12 +97,13 @@ mongo_posts = db[f'{forum}.posts']
 mongo_posts.drop()
 
 # Parse the xml file into a MongoDB collection and a csv
-filename = 'dataset/Posts.xml'
+filename = 'Posts.xml'
 csv_filename = 'posts.csv'
 print(os.getcwd())
-dates = set()
+dates = []
 start_time = time()
 i = 0
+i_prev = 0
 batch_dicts = []
 with open(csv_filename, 'w', newline='') as csv_file:
     csv_writer = csv.DictWriter(csv_file, metadata_cols, extrasaction='ignore')
@@ -128,13 +127,17 @@ with open(csv_filename, 'w', newline='') as csv_file:
         # Whenever we get to a new year, print it to indicate progress.
         d = attrib['CreationDate'].year
         if not (d in dates):
-            print(d)
-            dates.add(d)
+            posts_loaded = i-i_prev
+            duration = time() - start_time
+            rate = 10000 * duration / posts_loaded
+            print(f'{dates[-1]}: loaded {posts_loaded} posts in {duration:.2f} s ({rate} s per 10,000 posts)')
+            dates.append(d)
+            i_prev = i
+            start_time = time()
     # Write the remaining data
     if batch_dicts:
         mongo_posts.insert_many(batch_dicts)
         csv_writer.writerows(batch_dicts)
-print(f'Duration: {time() - start_time:.2f} s')
 
 print('Creating indices...')
 start_time = time()
