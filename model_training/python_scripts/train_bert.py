@@ -10,16 +10,16 @@ if not os.path.exists('BERT'):
     os.mkdir('BERT')
 os.chdir('BERT')
 
+# Set these parameters
 batch_size = 64
-steps_between_val = 16
-pretrain_steps = 256
-train_steps = 1024
-val_size = steps_between_val * batch_size * 8
+train_size = 2**16
+pretrain_size = train_size // 4
+val_size = 2**12
 
-# steps_between_val = 1_000
-# pretrain_steps = 10_000
-# train_steps = 10_000
-# val_size = 10_000
+# Derived parameters
+train_steps = train_size // batch_size
+pretrain_steps = pretrain_size // batch_size
+steps_between_val = val_size // batch_size
 
 tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 collate_fn = SequenceClassificationCollateFn(inputs_col='Title', labels_col='Answered', tokenizer=tokenizer)
