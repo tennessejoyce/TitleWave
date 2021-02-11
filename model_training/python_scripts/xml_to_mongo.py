@@ -50,6 +50,7 @@ def clean_text(text):
 def convert_time(s):
     return datetime.datetime.strptime(s, "%Y-%m-%dT%H:%M:%S.%f")
 
+
 def split_tags(s):
     tags = s.split('><')
     tags[0] = tags[0][1:]
@@ -127,7 +128,7 @@ with open(csv_filename, 'w', newline='') as csv_file:
         # Whenever we get to a new year, print it to indicate progress.
         d = attrib['CreationDate'].year
         if not (d in dates):
-            posts_loaded = i-i_prev
+            posts_loaded = i - i_prev
             duration = time() - start_time
             rate = 10000 * duration / posts_loaded
             print(f'{dates[-1]}: loaded {posts_loaded} posts in {duration:.2f} s ({rate} s per 10,000 posts)')
