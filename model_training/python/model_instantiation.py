@@ -1,4 +1,4 @@
-import transformers
+import torch
 from transformers import BertForSequenceClassification, BertTokenizer, T5ForConditionalGeneration, T5Tokenizer
 
 # Keyword arguments to pass to the tokenizer.

@@ -2,6 +2,7 @@ import pymongo
 import torch
 import numpy as np
 
+
 # Defines classes to interface MongoDB with Pytorch for data loading.
 
 
@@ -49,3 +50,12 @@ class MongoIterableDataset(torch.utils.data.IterableDataset):
 
     def __len__(self):
         return len(self.indices)
+
+
+classifier_projection = {'Title': True,
+                         'Answered': {'$gt': ['$AnswerCount', 0]},
+                         '_id': False}
+
+summarizer_projection = {'Title': True,
+                         'Body': True,
+                         '_id': False}

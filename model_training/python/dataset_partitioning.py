@@ -1,6 +1,8 @@
 import numpy as np
 import pymongo
-from datetime import datetime
+from datetime import datetime, timedelta
+from mongo_dataset import *
+from tqdm import tqdm
 
 # Split into three main sections: BERT, T5, Combined generation
 
@@ -30,21 +32,47 @@ def split_to_proportions(array, proportions, shuffle=True):
     sizes = [int(len(array) * p) for p in proportions]
     # Divide the remainder among the subarrays from first to last.
     remainder = len(array) - np.sum(sizes)
-    for i in remainder:
+    for i in range(remainder):
         sizes[i] += 1
     if shuffle:
         np.random.shuffle(array)
     split_locations = np.cumsum(sizes)[:-1]
-    return np.split(array, split_locations)
+    np_splits = np.split(array, split_locations)
+    # Convert from a nparray back to a nested list of ints.
+    return np_to_int_list(np_splits)
+
+
+def np_to_int_list(ids_np):
+    return [[int(i) for i in s] for s in ids_np]
+
+
+def batch_update(collection, ids, command, batch_size=256):
+    num_batches = len(ids) // batch_size
+    splits = np_to_int_list(np.array_split(ids, num_batches))
+    for batch_ids in tqdm(splits):
+        collection.update_many({'_id': {'$in': batch_ids}}, command)
 
 
 def make_partitions(collection, query, proportions=None):
+    print('Reseting partitions...')
+    reset_partitions(collection)
+    print('Assigning ids to partitions...')
     if proportions is None:
         proportions = default_proportions
     filtered_ids = get_mongo_ids(collection, query)
-    split_ids = split_to_proportions(filtered_ids, proportions.values())
+    split_ids = split_to_proportions(filtered_ids, list(proportions.values()))
+    print('Setting partitions in database...')
     for name, ids in zip(proportions.keys(), split_ids):
-        collection.update_many({'_id': {'$in': ids}}, {'$set': {'partition': name}})
+        print(f'{name}: {len(ids)} posts')
+        batch_update(collection, ids, {'$set': {'partition': name}})
+    # Create a sparse index on the partition field.
+    print('Indexing partitions...')
+    collection.create_index('partition', sparse=True)
+
+
+def reset_partitions(collection):
+    """Remove the partition field from all documents in the collection."""
+    collection.update_many({'partition': {'$exists': True}}, {'$unset': {'partition': 1}})
 
 
 def mongo_query(start_date, end_date, exclude_closed):
@@ -71,8 +99,29 @@ def year_range_query(start_year, end_year, exclude_closed=True):
     return query
 
 
+def single_day_query(day, month, year, exclude_closed=True):
+    """Returns a MongoDB query returning all posts for a given year."""
+    start_date = datetime(year, month, day)
+    query = mongo_query(start_date=start_date,
+                        end_date=start_date + timedelta(days=10),
+                        exclude_closed=exclude_closed)
+    return query
+
+
 def get_mongo_collection(forum):
     """Returns the Mongo collection corresponding to the specified StackExchange forum."""
     client = pymongo.MongoClient()
     posts = client.titlewave[f'{forum}.posts']
     return posts
+
+
+def get_classifier_dataset_partition(collection, partition):
+    ids = get_mongo_ids(collection, {'partition': partition})
+    return MongoDataset(collection, ids, classifier_projection)
+
+
+def get_summarizer_dataset_partition(collection, partition):
+    query = {'partition': partition, 'HasAcceptedAnswer': True}
+    ids = get_mongo_ids(collection, query)
+    return MongoDataset(collection, ids, summarizer_projection)
+

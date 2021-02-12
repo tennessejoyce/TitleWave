@@ -25,13 +25,7 @@ def get_dataset(forum, year, mode, val_size):
     posts = get_mongo_collection(forum)
     query = single_year_query(year)
     if mode == 'bert':
-        projection = {'Title': True,
-                     'Answered': {'$gt': ['$AnswerCount', 0]},
-                     '_id': False}
-    elif mode == 't5':
-        projection = {'Title': True,
-                      'Body': True,
-                      '_id': False}
+
     else:
         raise Exception(f"Unrecognized mode: '{mode}'. Should be 'bert' or 't5'.")
     ids = get_mongo_ids(posts, query)
