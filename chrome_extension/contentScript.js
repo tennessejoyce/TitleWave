@@ -32,13 +32,15 @@ function evaluate() {
 		//Send a request to my Flask webapp (hosted on AWS) to evaluate the quality of the title.
 		$.ajax({
 			type : 'POST',
-			url : 'https://www.titlewave.xyz/evaluate',
+			url : 'https://api-inference.huggingface.co/models/tennessejoyce/titlewave-bert-base-uncased',
 			dataType : 'json',
-			data : JSON.stringify({'title' : title.value}),
+			// data : JSON.stringify({'title' : title.value}),
+			data : JSON.stringify(title.value),
 			contentType: "application/json",
 			success : function(result) {
 				//Update the line of text below the title to report the results.
-				predict_line.textContent = " Probability of getting an answer: " + result
+				score = result[0][0].score.toFixed(4)
+				predict_line.textContent = " Probability of getting an answer: " + score
 			},
 			error: function(xhr, status, error) {
 				//If an error occurs, print it to the log.
@@ -61,18 +63,17 @@ function suggest() {
 		//Send a request to my Flask webapp (hosted on AWS) to summarize the question body into a title.
 		$.ajax({
 			type : 'POST',
-			url : 'https://www.titlewave.xyz/suggest',
+			url : 'https://api-inference.huggingface.co/models/tennessejoyce/titlewave-t5-small',
 			dataType : 'json',
-			data : JSON.stringify({'body' : body.value}),
+			data : JSON.stringify(body.value),
 			contentType: "application/json",
 			success : function(result) {
 				//On success, update the title textbox with the suggested title.
-				console.log(result)
-				title.value = result
+				title.value = result[0].generated_text
 				evaluate()
 			},
 			error: function(xhr, status, error) {
-				predict_line.textContent('Error')
+				predict_line.textContent = 'Error'
 				console.log(xhr.status)
                 console.log(status)
             }
