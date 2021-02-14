@@ -9,7 +9,8 @@ default_training_args = {'evaluation_strategy': 'no',
                          'save_total_limit': 1}
 
 
-def train_evaluate_save(model, collate_fn, train_dataset, val_dataset, head, **kwargs):
+def train_evaluate_save(model, collate_fn, train_dataset, val_dataset, head, return_predictions=False, save_model=True,
+                        **kwargs):
     """Train a model, evaluate it on a validation set, save the model, and return the evaluation results."""
     # Alias the 'batch_size' argument so that we can use the shorter name.
     if 'batch_size' in kwargs:
@@ -33,6 +34,10 @@ def train_evaluate_save(model, collate_fn, train_dataset, val_dataset, head, **k
                             train_dataset=train_dataset,
                             eval_dataset=val_dataset)
     trainer.train()
-    results = trainer.evaluate()
-    trainer.save_model()
+    if return_predictions:
+        results = trainer.predict(val_dataset)
+    else:
+        results = trainer.evaluate()
+    if save_model:
+        trainer.save_model()
     return results

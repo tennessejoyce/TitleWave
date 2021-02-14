@@ -9,15 +9,21 @@ import numpy as np
 class MongoDataset(torch.utils.data.Dataset):
     """Wraps a MongoDB collection as a Pytorch Dataset."""
 
-    def __init__(self, collection, indices, projection):
+    def __init__(self, collection, indices, projection, max_size=None):
         self.results = list(collection.find({'_id': {'$in': indices}}, projection))
+        np.random.shuffle(self.results)
+        self.max_size = max_size
+
 
     def __getitem__(self, idx):
         """Retrieve a single document from the MongoDB collection."""
         return self.results[idx]
 
     def __len__(self):
-        return len(self.results)
+        if self.max_size:
+            return self.max_size
+        else:
+            return len(self.results)
 
 
 def split_list(indices, chunk_size):

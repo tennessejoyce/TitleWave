@@ -115,13 +115,13 @@ def get_mongo_collection(forum):
     return posts
 
 
-def get_classifier_dataset_partition(collection, partition):
+def get_classifier_dataset_partition(collection, partition, max_size=None):
     ids = get_mongo_ids(collection, {'partition': partition})
-    return MongoDataset(collection, ids, classifier_projection)
+    return MongoDataset(collection, ids, classifier_projection, max_size)
 
 
-def get_summarizer_dataset_partition(collection, partition):
+def get_summarizer_dataset_partition(collection, partition, max_size=None):
     query = {'partition': partition, 'HasAcceptedAnswer': True}
     ids = get_mongo_ids(collection, query)
-    return MongoDataset(collection, ids, summarizer_projection)
+    return MongoDataset(collection, ids, summarizer_projection, max_size)
 

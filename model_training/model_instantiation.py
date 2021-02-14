@@ -17,7 +17,7 @@ class ClassificationCollateFn:
         raw_inputs = [row[self.inputs_col] for row in batch]
         labels = [row[self.labels_col] for row in batch]
         inputs = self.tokenizer(raw_inputs, **tokenizer_args)
-        inputs['labels'] = torch.tensor(labels).float()
+        inputs['labels'] = torch.tensor(labels).long()
         return inputs
 
 
@@ -56,7 +56,7 @@ def unfreeze_model(model):
 
 def get_bert_model(name='bert-base-uncased', frozen=False):
     """Instantiates the model and collation function for BERT."""
-    model = BertForSequenceClassification.from_pretrained(name, num_labels=1)
+    model = BertForSequenceClassification.from_pretrained(name, num_labels=2)
     tokenizer = BertTokenizer.from_pretrained(name)
     collate_fn = ClassificationCollateFn(inputs_col='Title', labels_col='Answered', tokenizer=tokenizer)
     if frozen:
