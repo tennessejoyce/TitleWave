@@ -1,5 +1,6 @@
 import torch
 from transformers import BertForSequenceClassification, BertTokenizer, T5ForConditionalGeneration, T5Tokenizer
+import optuna
 
 # Keyword arguments to pass to the tokenizer.
 tokenizer_args = {'truncation': True,
@@ -54,14 +55,20 @@ def unfreeze_model(model):
         p.requires_grad = True
 
 
-def get_bert_model(name='bert-base-uncased', frozen=False):
+def get_bert_model(name='bert-base-uncased', return_init=False, frozen=False):
     """Instantiates the model and collation function for BERT."""
-    model = BertForSequenceClassification.from_pretrained(name, num_labels=2)
     tokenizer = BertTokenizer.from_pretrained(name)
     collate_fn = ClassificationCollateFn(inputs_col='Title', labels_col='Answered', tokenizer=tokenizer)
-    if frozen:
-        freeze_model(model)
-    return model, collate_fn
+    if return_init:
+        def model_init():
+            model = BertForSequenceClassification.from_pretrained(name, num_labels=2)
+            if frozen:
+                freeze_model(model)
+            return model
+        return model_init, collate_fn
+    else:
+        model = BertForSequenceClassification.from_pretrained(name, num_labels=2)
+        return model, collate_fn
 
 
 def get_t5_model(name='t5-small'):
@@ -70,3 +77,5 @@ def get_t5_model(name='t5-small'):
     tokenizer = T5Tokenizer.from_pretrained(name)
     collate_fn = SummarizationCollateFn(inputs_col='Body', outputs_col='Title', tokenizer=tokenizer)
     return model, collate_fn
+
+
