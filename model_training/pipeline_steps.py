@@ -49,7 +49,7 @@ def eval_loss_objective(results_dict):
 def hyperparameter_optimization(collection, search_space, n_trials=8, base_hyperparameters=classifier_hyperparameters):
     classifier_train = get_classifier_dataset_partition(collection, 'classification_train')
     classifier_val = get_classifier_dataset_partition(collection, 'classification_val')
-    model_init, collate_fn = get_bert_model(return_init=True, frozen=False)
+    model_init, collate_fn = get_bert_model(return_init=True, frozen=True)
     trainer = Trainer(model_init=model_init,
                       args=get_train_args(**base_hyperparameters),
                       data_collator=collate_fn,
