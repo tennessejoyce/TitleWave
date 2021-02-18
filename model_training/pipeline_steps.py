@@ -1,6 +1,6 @@
 from model_instantiation import *
 from model_training import *
-from dataset_partitioning import *
+from partition_dataset import *
 import optuna
 
 classifier_hyperparameters = {'output_dir': 'BERT',

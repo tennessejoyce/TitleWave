@@ -1,4 +1,4 @@
-from dataset_partitioning import *
+from partition_dataset import *
 from pipeline_steps import *
 import os
 

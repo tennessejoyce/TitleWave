@@ -1,6 +1,5 @@
 from transformers import T5ForConditionalGeneration, pipeline, \
     BertForSequenceClassification, BertTokenizer, T5Tokenizer
-from data_loading import get_mongo_dataset
 import numpy as np
 
 forum = 'overflow'

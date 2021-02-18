@@ -1,62 +1,7 @@
 import pymongo
-import torch
 import numpy as np
-
-
-# Defines classes to interface MongoDB with Pytorch for data loading.
-
-
-class MongoDataset(torch.utils.data.Dataset):
-    """Wraps a MongoDB collection as a Pytorch Dataset."""
-
-    def __init__(self, collection, indices, projection, max_size=None):
-        self.results = list(collection.find({'_id': {'$in': indices}}, projection))
-        np.random.shuffle(self.results)
-        self.max_size = max_size
-
-
-    def __getitem__(self, idx):
-        """Retrieve a single document from the MongoDB collection."""
-        return self.results[idx]
-
-    def __len__(self):
-        if self.max_size:
-            return self.max_size
-        else:
-            return len(self.results)
-
-
-def split_list(indices, chunk_size):
-    """Splits a list into chunks of specified size."""
-    # Integers indexing the list of indices.
-    meta_indices = np.arange(0, len(indices))
-    np.random.shuffle(meta_indices)
-    num_chunks = len(indices) // chunk_size
-    chunked_meta_indices = np.array_split(meta_indices, num_chunks)
-    return [[indices[i] for i in chunk] for chunk in chunked_meta_indices]
-
-
-class MongoIterableDataset(torch.utils.data.IterableDataset):
-    """Wraps a MongoDB collection as a Pytorch IterableDataset which retrieves documents at random."""
-
-    def __init__(self, collection, indices, projection, chunk_size=256):
-        self.collection = collection
-        self.indices = indices
-        self.projection = projection
-        self.chunked_indices = split_list(indices, chunk_size=chunk_size)
-
-    def __iter__(self):
-        """Return a generator that requests documents in chunks, but returns them one at a time."""
-        for chunk in self.chunked_indices:
-            cursor = self.collection.find({'_id': {'$in': chunk}}, self.projection)
-            rows = list(cursor)
-            np.random.shuffle(rows)
-            for row in rows:
-                yield row
-
-    def __len__(self):
-        return len(self.indices)
-
+from tqdm import tqdm
+from datetime import datetime, timedelta
 
 classifier_projection = {'Title': True,
                          'Answered': {'$gt': ['$AnswerCount', 0]},
@@ -65,3 +10,90 @@ classifier_projection = {'Title': True,
 summarizer_projection = {'Title': True,
                          'Body': True,
                          '_id': False}
+
+
+def mongo_query(**kwargs):
+    """Create a MongoDB query based on a set of conditions."""
+    query = {}
+    if 'start_date' in kwargs:
+        if not ('CreationDate' in query):
+            query['CreationDate'] = {}
+        query['CreationDate']['$gte'] = kwargs['start_date']
+    if 'end_date' in kwargs:
+        if not ('CreationDate' in query):
+            query['CreationDate'] = {}
+        query['CreationDate']['$lt'] = kwargs['end_date']
+    if 'exclude_closed' in kwargs:
+        query['Closed'] = kwargs['exclude_closed']
+    return query
+
+
+def year_range_query(start_year, end_year, exclude_closed=True):
+    """Returns a MongoDB query returning all posts for a given year."""
+    query = mongo_query(start_date=datetime(start_year, 1, 1),
+                        end_date=datetime(end_year + 1, 1, 1),
+                        exclude_closed=exclude_closed)
+    return query
+
+
+def single_day_query(day, month, year, exclude_closed=True):
+    """Returns a MongoDB query returning all posts for a given day."""
+    start_date = datetime(year, month, day)
+    query = mongo_query(start_date=start_date,
+                        end_date=start_date + timedelta(days=10),
+                        exclude_closed=exclude_closed)
+    return query
+
+
+class MongoDataset:
+    """Interface between MongoDB and the rest of the Python code."""
+
+    def __init__(self, forum='overflow'):
+        try:
+            client = pymongo.MongoClient()
+        except Exception as e:
+            message = """Could not connect to MongoDB client. Make sure to start it by executing: sudo systemctl 
+            start mongod """
+            print(message)
+            raise e
+        self.collection = client.titlewave[f'{forum}.posts']
+
+    def get_mongo_ids(self, query):
+        """Fetches the ids of documents matching a query."""
+        result = self.collection.find(query, {'_id': True})
+        ids = [row['_id'] for row in result]
+        return ids
+
+    def batch_update(self, ids, command, batch_size=256, progress_bar=True):
+        """
+        Execute an update_many command in batches.
+
+        Parameters:
+            ids - The document ids in the Mongo collection of the documents to be updated.
+            command - The update command to be executed on each document.
+            batch_size - The number of documents to update in a single call of update_many.
+            progress_bar - Whether to display a progress bar.
+        """
+        num_batches = len(ids) // batch_size
+        # Split the array into batches of the specified size, and typecast the ids back to Python integers with tolist.
+        splits = np.array_split(ids, num_batches).tolist()
+        if progress_bar:
+            splits = tqdm(splits)
+        for batch_ids in splits:
+            self.collection.update_many({'_id': {'$in': batch_ids}}, command)
+
+    def get_partition(self, partition, projection):
+        """
+        Fetches all documents in a specified partition of the dataset.
+
+        Parameters:
+            partition - The name of the partition (e.g., "classifier_train")
+            projection - Indicates which fields of the documents to return.
+        """
+        ids = self.get_mongo_ids({'partition': partition})
+        cursor = self.collection.find({'_id': {'$in': ids}}, projection)
+        return list(cursor)
+
+    def reset_partitions(self):
+        """Remove the partition field from all documents in the collection."""
+        self.collection.update_many({'partition': {'$exists': True}}, {'$unset': {'partition': 1}})
