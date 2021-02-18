@@ -1,4 +1,4 @@
 .idea
 venv
 data
-.ipynb_checkpoints/
+.ipynb_checkpoints
