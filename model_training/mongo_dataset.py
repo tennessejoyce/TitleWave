@@ -3,14 +3,6 @@ import numpy as np
 from tqdm import tqdm
 from datetime import datetime, timedelta
 
-classifier_projection = {'Title': True,
-                         'Answered': {'$gt': ['$AnswerCount', 0]},
-                         '_id': False}
-
-summarizer_projection = {'Title': True,
-                         'Body': True,
-                         '_id': False}
-
 
 def mongo_query(**kwargs):
     """Create a MongoDB query based on a set of conditions."""
@@ -52,8 +44,8 @@ class MongoDataset:
         try:
             client = pymongo.MongoClient()
         except Exception as e:
-            message = """Could not connect to MongoDB client. Make sure to start it by executing: sudo systemctl 
-            start mongod """
+            message = """Could not connect to MongoDB client. Make sure to start it by executing: 
+            sudo systemctl start mongod """
             print(message)
             raise e
         self.collection = client.titlewave[f'{forum}.posts']
@@ -90,8 +82,7 @@ class MongoDataset:
             partition - The name of the partition (e.g., "classifier_train")
             projection - Indicates which fields of the documents to return.
         """
-        ids = self.get_mongo_ids({'partition': partition})
-        cursor = self.collection.find({'_id': {'$in': ids}}, projection)
+        cursor = self.collection.find({'partition': partition}, projection)
         return list(cursor)
 
     def reset_partitions(self):
