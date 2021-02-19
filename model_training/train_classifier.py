@@ -101,6 +101,17 @@ def train_evaluate(model, collate_fn, train_dataset, val_dataset, **kwargs):
     results = trainer.evaluate()
     return results
 
+def evaluate(model, collate_fn, val_dataset):
+    train_args = TrainingArguments(**{**default_training_args, **kwargs})
+    trainer = Trainer(model=model,
+                      args=train_args,
+                      data_collator=collate_fn,
+                      train_dataset=train_dataset,
+                      eval_dataset=val_dataset,
+                      compute_metrics=compute_metrics)
+    results = trainer.evaluate()
+    return results
+
 
 def two_phase_train(model, collate_fn, train_dataset, val_dataset, lr1, lr2):
     """
