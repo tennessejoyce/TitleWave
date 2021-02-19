@@ -13,10 +13,7 @@ import os
 # down into a MongoDB collection and a csv with the metadata.
 
 def xml_iterator(filename):
-    """
-	Iterates through an XMLfile too big to fit into memory, returning a
-	dictionary for each element.
-	"""
+    """Iterates through an XMLfile too big to fit into memory, returning a dictionary for each element."""
     is_first = True
     for event, elem in ET.iterparse(filename, events=("start", "end")):
         if is_first:
@@ -60,9 +57,9 @@ def split_tags(s):
 
 def prune_document(doc):
     """
-	Takes the dictonary of a post read from XML and takes only certain fields,
-	to be placed into the MongoDB.
-	"""
+    Takes the dictonary of a post read from XML and takes only certain fields,
+    to be placed into the MongoDB.
+    """
     return {'_id': int(doc['Id']),
             'CreationDate': convert_time(doc['CreationDate']),
             'Score': int(doc['Score']),
