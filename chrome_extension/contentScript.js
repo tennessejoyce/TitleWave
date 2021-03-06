@@ -10,12 +10,12 @@ var title = document.getElementById('title')
 var btn1 = document.createElement("BUTTON")
 btn1.innerHTML = "Evaluate title"
 btn1.type='button'
-btn1.id='iamabutton1'
+btn1.id='evaluate'
 full_title_area.appendChild(btn1)
 var btn2 = document.createElement("BUTTON")
 btn2.innerHTML = "Suggest a title"
 btn2.type='button'
-btn1.id='iamabutton2'
+btn1.id='suggest'
 full_title_area.appendChild(btn2)
 
 //The line of text that communicates with the user. Starts out blank.
@@ -39,8 +39,10 @@ function evaluate() {
 			contentType: "application/json",
 			success : function(result) {
 				//Update the line of text below the title to report the results.
-				score = result[0][0].score.toFixed(4)
-				predict_line.textContent = " Probability of getting an answer: " + score
+				score = result[0][1].score
+				score = score * 100
+				score = score.toFixed(1)
+				predict_line.textContent = " Probability of getting an answer: " + score + '%'
 			},
 			error: function(xhr, status, error) {
 				//If an error occurs, print it to the log.
