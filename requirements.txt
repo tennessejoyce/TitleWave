@@ -169,7 +169,7 @@ systemd-python==234
 tables==3.6.1
 tensorboard==2.4.1
 tensorflow-estimator==2.4.0
-tensorflow-gpu==2.4.1
+tensorflow-gpu==2.5.1
 termcolor==1.1.0
 terminado==0.8.2
 testpath==0.4.4
